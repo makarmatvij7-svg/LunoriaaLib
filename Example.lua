@@ -19,7 +19,7 @@
       https://github.com/violin-suzutsuki/LinoriaLib/blob/main/Example.lua                
 --]]
 
-local repo = "https://raw.githubusercontent.com/xyznick/UELinoriaLib/main/"
+local repo = "https://github.com/makarmatvij7-svg/LunoriaaLib/tree/main/"
 
 local Library      = loadstring(game:HttpGet(repo .. "Library.lua"))()
 local ThemeManager = loadstring(game:HttpGet(repo .. "addons/ThemeManager.lua"))()
