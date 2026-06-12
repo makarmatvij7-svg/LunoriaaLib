@@ -683,7 +683,7 @@ local GetPing = (function() return math.floor(game:GetService("Stats").Network.S
 local CanDoPing = pcall(function() return GetPing(); end)
 
 local WatermarkConnection = game:GetService("RunService").RenderStepped:Connect(function()
-	FrameCounter += 1;
+	FrameCounter = 1;
 
 	if (tick() - FrameTimer) >= 1 then
 		FPS = FrameCounter;
