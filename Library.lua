@@ -114,16 +114,17 @@ end
 local RainbowStep = 0
 local Hue = 0
 
--- FIXED: Throttled rainbow update to prevent frame drops
-Library:GiveSignal(RunService.Heartbeat:Connect(function(Delta)
+table.insert(Library.Signals, RenderStepped:Connect(function(Delta)
     RainbowStep = RainbowStep + Delta
-    -- Throttle to ~30fps to reduce CPU load and prevent timeouts
-    if RainbowStep >= (1 / 30) then
+
+    if RainbowStep >= (1 / 60) then
         RainbowStep = 0
+
         Hue = Hue + (1 / 400);
         if Hue > 1 then
             Hue = 0;
         end;
+
         Library.CurrentRainbowHue = Hue;
         Library.CurrentRainbowColor = Color3.fromHSV(Hue, 0.8, 1);
     end
@@ -332,38 +333,25 @@ function Library:AddToolTip(InfoStr, HoverInstance)
     });
     local IsHovering = false
 
-    local TooltipConnection = nil
-    local IsHovering = false
-
     HoverInstance.MouseEnter:Connect(function()
         if Library:MouseIsOverOpenedFrame() then
             return
         end
 
         IsHovering = true
+
         Tooltip.Position = UDim2.fromOffset(Mouse.X + 15, Mouse.Y + 12)
         Tooltip.Visible = true
 
-        if TooltipConnection then
-            TooltipConnection:Disconnect()
-        end
-        TooltipConnection = RunService.Heartbeat:Connect(function()
-            if not IsHovering then
-                TooltipConnection:Disconnect()
-                TooltipConnection = nil
-                return
-            end
+        while IsHovering do
+            RunService.Heartbeat:Wait()
             Tooltip.Position = UDim2.fromOffset(Mouse.X + 15, Mouse.Y + 12)
-        end)
+        end
     end)
 
     HoverInstance.MouseLeave:Connect(function()
         IsHovering = false
         Tooltip.Visible = false
-        if TooltipConnection then
-            TooltipConnection:Disconnect()
-            TooltipConnection = nil
-        end
     end)
 end
 
@@ -565,12 +553,7 @@ do
             ZIndex = 15;
             Parent = ScreenGui,
         });
-        -- FIXED: Throttled position update to prevent excessive firing
-        local LastAPUpdate = 0
         DisplayFrame:GetPropertyChangedSignal('AbsolutePosition'):Connect(function()
-            local now = tick()
-            if now - LastAPUpdate < 0.05 then return end
-            LastAPUpdate = now
             PickerFrameOuter.Position = UDim2.fromOffset(DisplayFrame.AbsolutePosition.X, DisplayFrame.AbsolutePosition.Y + 18);
         end)
 
@@ -781,12 +764,7 @@ do
                 PaddingLeft = UDim.new(0, 4),
                 Parent = ContextMenu.Inner,
             });
-            -- FIXED: Throttled menu position updates
-            local LastMenuUpdate = 0
             local function updateMenuPosition()
-                local now = tick()
-                if now - LastMenuUpdate < 0.033 then return end
-                LastMenuUpdate = now
                 ContextMenu.Container.Position = UDim2.fromOffset(
                     (DisplayFrame.AbsolutePosition.X + DisplayFrame.AbsoluteSize.X) + 4,
                     DisplayFrame.AbsolutePosition.Y + 1
@@ -810,8 +788,8 @@ do
             DisplayFrame:GetPropertyChangedSignal('AbsolutePosition'):Connect(updateMenuPosition)
             ContextMenu.Inner.Layout:GetPropertyChangedSignal('AbsoluteContentSize'):Connect(updateMenuSize)
 
-            task.defer(updateMenuPosition)
-            task.defer(updateMenuSize)
+            task.spawn(updateMenuPosition)
+            task.spawn(updateMenuSize)
 
             Library:AddToRegistry(ContextMenu.Inner, {
                 BackgroundColor3 = 'BackgroundColor';
@@ -1199,12 +1177,7 @@ do
             ZIndex = 14;
             Parent = ScreenGui;
         });
-        -- FIXED: Throttled position update
-        local LastModeUpdate = 0
         ToggleLabel:GetPropertyChangedSignal('AbsolutePosition'):Connect(function()
-            local now = tick()
-            if now - LastModeUpdate < 0.05 then return end
-            LastModeUpdate = now
             ModeSelectOuter.Position = UDim2.fromOffset(ToggleLabel.AbsolutePosition.X + ToggleLabel.AbsoluteSize.X + 4, ToggleLabel.AbsolutePosition.Y + 1);
         end);
         local ModeSelectInner = Library:Create('Frame', {
@@ -1400,11 +1373,11 @@ do
                         Text = Text .. '.';
                         DisplayLabel.Text = Text;
 
-                        task.wait(0.4);
+                        wait(0.4);
                     end;
                 end);
 
-                task.wait(0.2);
+                wait(0.2);
 
                 local Event;
                 Event = InputService.InputBegan:Connect(function(Input)
@@ -3117,10 +3090,10 @@ function Library:Notify(Text, Time)
     pcall(NotifyOuter.TweenSize, NotifyOuter,
         UDim2.new(0, finalWidth, 0, YSize), 'Out', 'Quad', 0.4, true);
     task.spawn(function()
-        task.wait(Time or 5);
+        wait(Time or 5);
         pcall(NotifyOuter.TweenSize, NotifyOuter,
             UDim2.new(0, 0, 0, YSize), 'Out', 'Quad', 0.4, true);
-        task.wait(0.4);
+        wait(0.4);
         NotifyOuter:Destroy();
     end);
 end;
@@ -3747,7 +3720,7 @@ function Library:CreateWindow(...)
                     CursorOutline.PointB = Cursor.PointB;
                     CursorOutline.PointC = Cursor.PointC;
 
-                    task.wait(1/60); -- FIXED: Use task.wait instead of RenderStepped:Wait()
+                    RenderStepped:Wait();
                 end;
 
                 InputService.MouseIconEnabled = State;
